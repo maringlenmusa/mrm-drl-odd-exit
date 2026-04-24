@@ -1,13 +1,21 @@
 """
-Per-episode scenario variation matching Phase 2 scripts.
+Per-episode scenario variation for Phase 3 RL training.
 
-Same logic as `src.main._run_phase3_random`: each sample draws either
-- **baseline** regime (speeds + rear distance from `baseline_comparison`), or
-- **short_front_gap** regime (gap-at-trigger from `short_front_gap_coverage`).
+Every time the environment resets, this module draws fresh scenario parameters
+so the agent trains on a varied distribution rather than one fixed scenario.
 
-Used by Phase 3 training so PPO sees the same distribution as
-`phase2_baseline` / `phase2_short_front_gap` runs — not a single fixed
-`state_bridge` block.
+Two regimes are sampled (controlled by phase3.episode_variation.mix_baseline_probability):
+
+  Baseline regime (easy):
+      ego and front car at similar speeds, large initial gap.
+      Range from configs/phase3_train.yaml → baseline_comparison.*
+
+  Short-front-gap regime (hard):
+      front car slower than ego, gap at ODD exit is tight (4–15 m).
+      Range from configs/phase3_train.yaml → short_front_gap_coverage.*
+
+To train on a different scenario distribution, edit those two config sections.
+See TRAINING_ON_NEW_SCENARIOS.md for a full guide.
 """
 
 from __future__ import annotations
@@ -51,6 +59,15 @@ def sample_reset_options(cfg: dict, rng: random.Random) -> Dict[str, Any]:
 
 
 def _sample_baseline_options(cfg: dict, rng: random.Random) -> Dict[str, Any]:
+    """
+    Draw one 'easy' episode: similar ego/front speeds, comfortable gap.
+
+    Reads speed and distance ranges from config:
+        baseline_comparison.speed_min_mps  →  baseline_comparison.speed_max_mps
+        baseline_comparison.distance_min_m →  baseline_comparison.distance_max_m
+
+    To change what 'easy' looks like, edit those ranges in the YAML config.
+    """
     bl = get_baseline_defaults(cfg)
     # One fresh sample (same as build with n_episodes=1)
     params = build_baseline_params(
@@ -86,6 +103,20 @@ def _sample_baseline_options(cfg: dict, rng: random.Random) -> Dict[str, Any]:
 
 
 def _sample_short_front_gap_options(cfg: dict, rng: random.Random) -> Dict[str, Any]:
+    """
+    Draw one 'hard' episode: front car slower than ego, tight gap at ODD exit.
+
+    The gap at ODD exit is drawn from:
+        short_front_gap_coverage.gap_at_trigger_min_m
+        short_front_gap_coverage.gap_at_trigger_max_m
+
+    The initial ego and front car positions are then back-calculated so that
+    by the time ODD fires (trigger_time_s), the gap has closed to that value.
+
+    To change what 'hard' looks like, edit those gap and speed ranges in the config.
+    Important: gap_at_trigger_min_m must be large enough that stopping is physically
+    possible. Rule of thumb: ≥ v_rel²/(2×decel) + 5  (e.g., ≥ 7 m at 30–40 km/h).
+    """
     sfg = get_short_front_gap_defaults(cfg)
     params = build_sfg_params(
         mode="gap_at_trigger",

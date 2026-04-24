@@ -64,13 +64,60 @@ docs/
 
 ## Setup
 
-**Requirements:** Python 3.10+, esmini (for full simulation)
+**Requirements:** Python 3.10+, esmini v2.58.0 (for full simulation)
 
 ```bash
 pip install -r requirements.txt
 ```
 
-For full simulation runs, esmini must be installed separately (see [esmini releases](https://github.com/esmini/esmini/releases)). Place `esmini/bin/` in the project root.
+### Installing esmini
+
+1. Download **esmini v2.58.0** from [github.com/esmini/esmini/releases/tag/v2.58.0](https://github.com/esmini/esmini/releases/tag/v2.58.0)
+2. Extract so the folder structure is:
+   ```
+   rp3-public/
+     esmini/
+       bin/
+         esmini.exe          (Windows) or esmini (Linux)
+         esminiLib.dll       (Windows) or libesminiLib.so (Linux)
+         resources/
+           xosc/
+           xodr/
+           models/
+   ```
+3. Verify esmini works: `esmini/bin/esmini --osc esmini/bin/resources/xosc/cut-in.xosc`
+
+> **Note:** Other esmini versions may work but have not been tested. If you see `SE_Init failed`, check the esmini version first.
+
+### First-time setup checklist
+
+- [ ] Python 3.10+ installed
+- [ ] `pip install -r requirements.txt` ran without errors
+- [ ] `esmini/bin/esminiLib.dll` (or `.so`) exists
+- [ ] Quick smoke test passes:
+  ```bash
+  py -3 -c "from src.config import load_config; print('OK')"
+  ```
+- [ ] Trained model query works (no simulator needed):
+  ```bash
+  py -3 -c "
+  from stable_baselines3 import PPO
+  import numpy as np
+  model = PPO.load('trained_model/policy_interrupted.zip')
+  obs = np.zeros(10, dtype=np.float32)
+  action, _ = model.predict(obs, deterministic=True)
+  print('Model loaded OK. Action:', {0:'STRAIGHT_STOP',1:'IN_LANE_STOP',2:'ROAD_SHOULDER_STOP'}[int(action)])
+  "
+  ```
+
+### Common issues
+
+| Problem | Fix |
+|---|---|
+| `OSError: [WinError 10048] Only one usage of each socket address` | A previous training run left a process running. Run: `Get-Process py,python \| Stop-Process -Force` then retry. |
+| `SE_Init failed` | Check esmini version (needs v2.58.0) and that the `.xosc` path is correct relative to the bin folder. |
+| `ModuleNotFoundError: No module named 'stable_baselines3'` | Run `pip install -r requirements.txt` again. |
+| Training seems stuck at ep 1 | esmini UI may have opened in the background. Set `sim.headless: true` in the config for faster headless training. |
 
 ---
 

@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 
+    OpenSCENARIO file for Phase 1 ODD Exit RL project.
+    
+    This scenario defines a straight road with an ego vehicle that can be
+    controlled via external UDP commands (hybrid control mode).
+    
+    Paths are relative to esmini's bin directory (where esmini.exe runs from).
+-->
+<OpenSCENARIO>
+   <FileHeader revMajor="1"
+               revMinor="1"
+               date="2026-01-27T10:00:00"
+               description="ODD Exit RL - Phase 1 Basic Scenario"
+               author="ODD Exit RL Project"/>
+   <ParameterDeclarations>
+      <ParameterDeclaration name="TargetVehicle" parameterType="string" value="car_red"/>
+   </ParameterDeclarations>
+   <CatalogLocations>
+      <VehicleCatalog>
+         <Directory path="resources/xosc/Catalogs/Vehicles"/>
+      </VehicleCatalog>
+   </CatalogLocations>
+    <RoadNetwork>
+      <LogicFile filepath="resources/xodr/straight_500m.xodr"/>
+      <!-- SceneGraphFile is optional - esmini can generate the road model -->
+   </RoadNetwork>
+   <Entities>
+      <ScenarioObject name="Ego">
+         <Vehicle name="car_white" vehicleCategory="car" model3d="resources/models/car_white.osgb">
+            <BoundingBox>
+               <Center x="1.4" y="0.0" z="0.9"/>
+               <Dimensions width="2.0" length="5.0" height="1.8"/>
+            </BoundingBox>
+            <Performance maxSpeed="69" maxDeceleration="30" maxAcceleration="10"/>
+            <Axles>
+               <FrontAxle maxSteering="30"
+                          wheelDiameter="0.8"
+                          trackWidth="1.68"
+                          positionX="2.98"
+                          positionZ="0.4"/>
+               <RearAxle maxSteering="30"
+                         wheelDiameter="0.8"
+                         trackWidth="1.68"
+                         positionX="0"
+                         positionZ="0.4"/>
+            </Axles>
+            <Properties>
+                <Property name="model_id" value="0"/>
+                <Property name="scaleMode" value="ModelToBB"/>  
+                <!-- hybrid control allows external UDP control -->
+                <Property name="control" value="hybrid"/>
+            </Properties>
+         </Vehicle>
+      </ScenarioObject>
+      <ScenarioObject name="Target">
+         <CatalogReference catalogName="VehicleCatalog" entryName="$TargetVehicle"/>
+      </ScenarioObject>
+   </Entities>
+   <Storyboard>
+      <Init>
+         <Actions>
+            <Private entityRef="Ego">
+               <PrivateAction>
+                  <LongitudinalAction>
+                     <SpeedAction>
+                        <SpeedActionDynamics dynamicsShape="step" dynamicsDimension="time" value="0.0"/>
+                        <SpeedActionTarget>
+                           <AbsoluteTargetSpeed value="15"/>
+                        </SpeedActionTarget>
+                     </SpeedAction>
+                  </LongitudinalAction>
+               </PrivateAction>
+               <PrivateAction>
+                  <TeleportAction>
+                     <Position>
+                        <LanePosition roadId="1" laneId="-1" offset="0" s="50"/>
+                     </Position>
+                  </TeleportAction>
+               </PrivateAction>
+            </Private>
+            <Private entityRef="Target">
+               <PrivateAction>
+                  <LongitudinalAction>
+                     <SpeedAction>
+                        <SpeedActionDynamics dynamicsShape="step" dynamicsDimension="time" value="0.0"/>
+                        <SpeedActionTarget>
+                           <AbsoluteTargetSpeed value="0"/>
+                        </SpeedActionTarget>
+                     </SpeedAction>
+                  </LongitudinalAction>
+               </PrivateAction>
+               <PrivateAction>
+                  <TeleportAction>
+                     <Position>
+                        <LanePosition roadId="1" laneId="-1" offset="0" s="350"/>
+                     </Position>
+                  </TeleportAction>
+               </PrivateAction>
+            </Private>
+         </Actions>
+      </Init>
+	  <Story name="MyStory">
+         <Act name="DummyAct">
+            <ManeuverGroup maximumExecutionCount="1" name="DummyManueverGroup">
+               <Actors selectTriggeringEntities="false">
+                  <EntityRef entityRef="Ego"/>
+               </Actors>
+            </ManeuverGroup>
+            <StartTrigger>
+               <ConditionGroup>
+                  <Condition name="StartTrigger" delay="0" conditionEdge="none">
+                     <ByValueCondition>
+                        <SimulationTimeCondition value="0" rule="greaterThan"/>
+                     </ByValueCondition>
+                  </Condition>
+               </ConditionGroup>
+            </StartTrigger>
+         </Act>	  
+      </Story>
+		<StopTrigger>
+		  <ConditionGroup>
+			 <Condition name="StopCondition" delay="0" conditionEdge="rising">
+				<ByValueCondition>
+					<SimulationTimeCondition value="60" rule="greaterThan"/>
+				</ByValueCondition>
+			 </Condition>
+		  </ConditionGroup>
+		</StopTrigger>
+   </Storyboard>
+</OpenSCENARIO>

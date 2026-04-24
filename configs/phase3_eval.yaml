@@ -1,0 +1,153 @@
+# Phase 3 evaluation config
+# Run: py -3 -u -m src.main --phase phase3_eval --config configs/phase3_eval.yaml
+
+run:
+  name: "phase3_eval"
+  seed: 999          # different seed from training so test scenarios are new
+  max_steps: 5000
+
+# ── Point this to your trained model ─────────────────────────────────────────
+evaluation:
+  policy_path: "logs/runs/2026-04-22_10-40-01_phase3_train/artifacts/policy_interrupted.zip"
+  n_episodes: 80
+  deterministic: true
+
+# ── Same sim stack as training (do not change) ───────────────────────────────
+road_network: "curved_20deg"
+road_curvature_rad_m: -6.9813170079773183e-04
+
+sim:
+  esmini_exe: "esmini/bin/esmini.exe"
+  scenario_path: "esmini/bin/resources/xosc/straight_500m.xosc"
+  dt: 0.05
+  headless: true               # set false + esmini_lib_show_ui: true to watch
+  window_size: "60 60 1280 720"
+  decel_mps2: 4.5
+  state_source: "esmini"
+  esmini_lib_show_ui: false    # set true to watch evaluation episodes in UI
+  use_generated_scenario_from_state_bridge: true
+
+udp:
+  listen_ip: "127.0.0.1"
+  listen_port: 48100
+  send_ip: "127.0.0.1"
+  send_port: 49950
+  recv_timeout_s: 0.5
+
+state_bridge:
+  initial_speed_mps: 9.0
+  initial_x_m: 50.0
+  initial_y_m: 1.75
+  collision_threshold_m: 3.0
+  ego_decel_mps2: 4.5
+  actors:
+    - actor_id: 1
+      x_m: 100.0
+      y_m: 1.75
+      speed_mps: 6.0
+      lane_id: -1
+    - actor_id: 2
+      rear_follower: true
+      distance_behind_ego_m: 30.0
+      reaction_delay_s: 1.0
+      decel_factor: 1.5
+      y_m: 1.75
+      lane_id: -1
+
+odd_exit:
+  trigger_time_s: 7.0
+
+risk:
+  max_speed_mps: 15.0
+  ttc_safe_s: 5.0
+  ttc_critical_s: 2.0
+  weight_drf: 0.5
+  weight_dara: 0.5
+  accumulate_risk_phase: "whole_episode"
+  k_theta: 0.5
+  k_r: 0.05
+  max_distance_m: 50.0
+
+baseline:
+  risk_brake_threshold: 0.40
+  min_right_gap_for_pull_over: 15.0
+  risk_pull_over_max: 0.15
+  min_rear_gap_for_shoulder_m: 20.0
+
+shield:
+  min_right_gap_m: 12.0
+  min_rear_gap_m: 30.0
+
+mrm:
+  normal_driving:
+    throttle_value: 0.1
+  brake:
+    throttle_value: 0.0
+    brake_value: 0.769
+    steer_value: 0.0
+  straight_stop_brake:
+    throttle_value: 0.0
+    brake_value: 1.0
+    steer_value: 0.0
+  pull_over_right:
+    throttle_value: 0.0
+    brake_value: 0.7
+    steer_value: -0.9
+
+stop_conditions:
+  after_odd_exit_stop_speed_mps: 1.3
+  stopped_for_s: 2.0
+  hard_timeout_s: 30.0
+  mrc_stop_speed_mps: 0.5
+
+# Same scenario variation as training so results are comparable
+scenario_sampler:
+  scenarios:
+    - "esmini/bin/resources/xosc/straight_500m.xosc"
+  trigger_time_s_variations: [7.0, 8.0]
+
+short_front_gap_coverage:
+  mode: "gap_at_trigger"
+  gap_at_trigger_min_m: 4.0
+  gap_at_trigger_max_m: 15.0
+  ego_speed_min_mps: 8.0
+  ego_speed_max_mps: 11.0
+  lead_speed_min_mps: 4.0
+  lead_speed_max_mps: 7.0
+  min_initial_gap_m: 30.0
+  trigger_time_s_variations: [7.0, 8.0]
+  n_episodes: 10
+  distance_behind_ego_min_m: 12.0
+  distance_behind_ego_max_m: 48.0
+
+baseline_comparison:
+  n_episodes: 10
+  trigger_time_s: 7.0
+  speed_min_mps: 8.0
+  speed_max_mps: 11.0
+  distance_min_m: 12.0
+  distance_max_m: 48.0
+  speed_steps: 4
+  distance_steps: 4
+
+# Ablation flags — must match the training config that produced the policy
+ablations:
+  use_risk_features: true
+  use_risk_penalty_in_reward: true
+  use_shield: true
+
+training:
+  mrm_decision_mode: "one_shot"
+
+phase3:
+  episode_variation:
+    enabled: true
+    mix_baseline_probability: 0.5
+
+reward:
+  risk_step_penalty_weight: 0.5
+  step_cost: 0.01
+  collision_penalty: 100.0
+  success_bonus: 10.0
+  shoulder_bonus: 5.0
+  lane_block_penalty: 2.0

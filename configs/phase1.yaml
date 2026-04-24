@@ -1,0 +1,35 @@
+run:
+  name: "phase1_smoke_test"
+  seed: 123
+  max_steps: 5000
+
+sim:
+  esmini_exe: "esmini/bin/esmini.exe"       # relative to project root, or absolute path
+  scenario_path: "esmini/bin/resources/xosc/straight_500m.xosc"  # built-in demo scenario
+  dt: 0.05                                   # 20Hz
+  start_timeout_s: 10
+  headless: false                            # Set to true to run without visualization window
+  window_size: "60 60 1280 720"              # Window position and size: "x y width height"
+  # state_source: "esmini" = receive state from esmini UDP; "state_bridge" = synthetic state (Python)
+  state_source: "state_bridge"
+
+udp:
+  listen_ip: "127.0.0.1"
+  listen_port: 48100          # state from esmini -> python
+  send_ip: "127.0.0.1"
+  send_port: 48101            # control python -> esmini
+  recv_timeout_s: 0.5
+
+odd_exit:
+  trigger_time_s: 8.0          # ODD exit at 8s (use 5.0, 8.0, 10.0 for tests)
+
+mrm:
+  brake:
+    brake_value: 1.0
+    steer_value: 0.0
+    throttle_value: 0.0
+
+stop_conditions:
+  after_odd_exit_stop_speed_mps: 1.3
+  stopped_for_s: 2.0
+  hard_timeout_s: 30.0

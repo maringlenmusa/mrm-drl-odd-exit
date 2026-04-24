@@ -1,0 +1,7 @@
+{
+  "completed": false,
+  "reason": "keyboard_interrupt",
+  "num_timesteps": 25363,
+  "total_timesteps_requested": 50000,
+  "policy_path": "policy_interrupted.zip"
+}

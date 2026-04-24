@@ -1,0 +1,155 @@
+# Phase 2: Risk assessment & baseline decision-making
+# Speed regime: 30–40 km/h (8.3–11.1 m/s) — low-speed urban/sub-urban ODD exit.
+
+run:
+  name: "phase2_baseline_risk"
+  seed: 123
+  max_steps: 5000
+
+road_network: "curved_20deg"
+road_curvature_rad_m: -6.9813170079773183e-04
+
+sim:
+  esmini_exe: "esmini/bin/esmini.exe"
+  scenario_path: "esmini/bin/resources/xosc/straight_500m.xosc"
+  dt: 0.05
+  start_timeout_s: 10
+  headless: false
+  window_size: "60 60 1280 720"
+  # City/low-speed deceleration: 4.5 m/s² (was 7.0 for highway).
+  decel_mps2: 4.5
+  state_source: "esmini"
+  esmini_lib_show_ui: true
+  use_generated_scenario_from_state_bridge: true
+
+scenario_sampler:
+  scenarios:
+    - "esmini/bin/resources/xosc/straight_500m.xosc"
+  trigger_time_s_variations: [ 5.0, 7.0, 8.0 ]
+
+udp:
+  listen_ip: "127.0.0.1"
+  listen_port: 48100
+  send_ip: "127.0.0.1"
+  send_port: 49950
+  recv_timeout_s: 0.5
+
+# Ego: 9 m/s = 32 km/h; throttle 0.1 adds ~1.4 m/s → ~37 km/h at ODD exit (7 s).
+# Lead: 6 m/s = 22 km/h, 50 m ahead → gap at ODD ≈ 19 m (TTC ≈ 4.4 s).
+state_bridge:
+  initial_speed_mps: 9.0     # was 35.0 m/s (highway); now 32 km/h
+  initial_x_m: 50.0
+  initial_y_m: 1.75
+  collision_threshold_m: 3.0
+  ego_decel_mps2: 4.5        # must match sim.decel_mps2
+  actors:
+    - actor_id: 1
+      x_m: 100.0
+      y_m: 1.75
+      speed_mps: 6.0         # was 20.0 m/s; now 22 km/h lead car
+      lane_id: -1
+    - actor_id: 2
+      rear_follower: true
+      distance_behind_ego_m: 30.0
+      reaction_delay_s: 1.0
+      decel_factor: 1.5
+      y_m: 1.75
+      lane_id: -1
+
+odd_exit:
+  trigger_time_s: 8.0
+
+risk:
+  # max_speed_mps normalises obs[0]. At 40 km/h max, 15 m/s gives obs[0] ≈ 0.73 — well scaled.
+  max_speed_mps: 15.0        # was 30.0 (highway)
+  ttc_safe_s: 5.0
+  ttc_critical_s: 2.0
+  weight_drf: 0.5
+  weight_dara: 0.5
+  accumulate_risk_phase: "whole_episode"
+  k_theta: 0.5
+  k_r: 0.05
+  max_distance_m: 50.0
+
+# Baseline MRM rules — thresholds recalibrated for 30-40 km/h.
+# At low speed, DRF ≈ 0 (scale=350 calibrated for highway);
+# risk_total ≈ 0.5 × DARA ≤ 0.50 max.
+# Thresholds adjusted so all 3 MRMs are reachable:
+#   risk ≥ 0.40 → STRAIGHT_STOP  (TTC < ~2.4 s, closing fast)
+#   risk < 0.15 → ROAD_SHOULDER  (TTC > ~4.5 s, comfortable)
+#   else         → IN_LANE_STOP
+baseline:
+  risk_brake_threshold: 0.40       # was 0.70; achievable when TTC ≈ 2 s
+  min_right_gap_for_pull_over: 15.0
+  risk_pull_over_max: 0.15         # was 0.35; lower = more selective pull-over
+  min_rear_gap_for_shoulder_m: 20.0
+
+shield:
+  min_right_gap_m: 12.0
+  min_rear_gap_m: 30.0
+
+mrm:
+  normal_driving:
+    throttle_value: 0.1    # was 0.4; 0.1×2=0.2 m/s² keeps ego ≈ 35-40 km/h
+  brake:
+    throttle_value: 0.0
+    brake_value: 0.769     # in-lane: 77% × 4.5 = 3.46 m/s² → stop 11 m/s in 3.2 s / 17 m
+    steer_value: 0.0
+  straight_stop_brake:
+    throttle_value: 0.0
+    brake_value: 1.0       # full 4.5 m/s² → stop 11 m/s in 2.4 s / 13 m
+    steer_value: 0.0
+  pull_over_right:
+    throttle_value: 0.0
+    brake_value: 0.7       # 70% × 4.5 = 3.15 m/s² → stop in 3.5 s / 19 m
+    steer_value: -0.9      # heading cap ≈ 20° → lateral shift ≈ 1.5 m (shoulder)
+
+stop_conditions:
+  after_odd_exit_stop_speed_mps: 1.3
+  stopped_for_s: 2.0
+  hard_timeout_s: 30.0
+  mrc_stop_speed_mps: 0.5
+
+# Baseline comparison — speed range recalibrated for 30-40 km/h.
+baseline_comparison:
+  n_episodes: 80
+  trigger_time_s: 7.0
+  speed_min_mps: 8.0     # was 20.0  (29 km/h)
+  speed_max_mps: 11.0    # was 35.0  (40 km/h)
+  distance_min_m: 12.0
+  distance_max_m: 48.0
+  speed_steps: 4
+  distance_steps: 4
+
+# Short front gap — recalibrated for 30-40 km/h.
+# Relative stop dist = v_rel² / (2 × 4.5).
+# At closing=4 m/s: stop dist = 1.8 m → gap ≥ 4 m is always stoppable.
+short_front_gap_coverage:
+  mode: "gap_at_trigger"
+  gap_at_trigger_min_m: 4.0      # was 25.0; 4 m stoppable at 30-40 km/h
+  gap_at_trigger_max_m: 15.0     # was 40.0
+  ego_speed_min_mps: 8.0         # was 20.0  (29 km/h)
+  ego_speed_max_mps: 11.0        # was 25.0  (40 km/h)
+  lead_speed_min_mps: 4.0        # was 10.0  (14 km/h)
+  lead_speed_max_mps: 7.0        # was 18.0  (25 km/h)
+  min_initial_gap_m: 10.0        # was 20.0
+  trigger_time_s_variations: [ 7.0 ]
+  n_episodes: 80
+  distance_behind_ego_min_m: 12.0
+  distance_behind_ego_max_m: 48.0
+  distance_behind_ego_m: 30.0
+  front_gap_min_m: 5.0           # was 15.0
+  front_gap_max_m: 20.0          # was 40.0
+  speed_min_mps: 8.0             # was 20.0
+  speed_max_mps: 11.0            # was 35.0
+  front_gap_steps: 4
+  speed_steps: 3
+
+# Shoulder obstacles — static barriers on the right shoulder (30% of episodes).
+shoulder_obstacles:
+  enabled: true
+  probability: 0.3
+  right_offset_m: 4.0
+  count: 4
+  spacing_m: 40.0
+  start_ahead_m: 20.0

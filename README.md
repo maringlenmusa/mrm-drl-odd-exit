@@ -112,6 +112,10 @@ py -3 -u -m src.main --phase phase3_train --config configs/phase3_train.yaml
 
 See `docs/phase3_how_to_run.md` for full details.
 
+**Training on a different scenario or road network:**  
+See `TRAINING_ON_NEW_SCENARIOS.md` (change speeds, gaps, reward, obstacles via config)  
+and `ADDING_NEW_ROAD_AND_SCENARIO.md` (plug in a new `.xodc`/`.xosc` entirely).
+
 ---
 
 ## Running evaluation (RL vs baseline)

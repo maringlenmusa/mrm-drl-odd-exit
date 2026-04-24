@@ -1,5 +1,7 @@
 # DRL-Based Minimum Risk Manoeuvre Selection at ODD Exit
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 **Master Thesis Project** — Deep Reinforcement Learning for autonomous vehicle safety decisions.
 
 ---
@@ -163,6 +165,15 @@ Observation (10 features)           Safety shield (veto unsafe pull-over)
 - **Speed regime:** 30–40 km/h (8–11 m/s) city/sub-urban
 - **Risk metrics:** DRF (Driving Risk Field, supervisor formula) + DARA (TTC-based)
 - **Decision mode:** one-shot — agent decides MRM once at ODD exit
+
+---
+
+## License
+
+This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file.
+
+You are free to use, modify, and share this code for any purpose, including academic research,
+as long as you include the original copyright notice (credit to the author).
 
 ---
 
